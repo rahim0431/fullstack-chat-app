@@ -2,7 +2,7 @@
 
 A feature-rich, full-stack real-time chat application designed for seamless communication. This platform supports 1-on-1 conversations, group chats, online status indicators, rich media sharing (such as profile picture uploads via Cloudinary), and real-time video calling features.
 
-![App Demo](/frontend/public/screenshot-for-readme.png)
+![App Demo](/frontend/public/screenshot.png)
 
 ## ✨ Key Features
 

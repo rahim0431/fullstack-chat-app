@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <linearGradient id="chat-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#3B82F6" /> <stop offset="50%" stop-color="#A855F7" /> <stop offset="100%" stop-color="#EC4899" /> </linearGradient>
+  </defs>
+  
+  <path 
+    d="M14 4H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2v4l4-4h5a2 2 0 0 0 2-2v-4" 
+    stroke="url(#chat-grad)" 
+    stroke-width="3" 
+    stroke-linecap="round" 
+    stroke-linejoin="round"
+  />
+  
+  <polygon 
+    points="19,2 20,5.5 23.5,6.5 20,7.5 19,11 18,7.5 14.5,6.5 18,5.5" 
+    fill="#FDE047" 
+  />
+</svg>

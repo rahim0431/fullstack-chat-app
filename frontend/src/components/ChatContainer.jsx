@@ -53,6 +53,7 @@ const ChatContainer = ({ onOpenSidebar }) => {
   const searchResetRef = useRef(null);
   const [isMessageSearchOpen, setIsMessageSearchOpen] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState(null);
+  const isInitialLoad = useRef(true);
   const backupFrequency = authUser?.chatSettings?.backupFrequency || "Weekly";
 
   const scrollToBottom = useCallback((behavior = "smooth") => {
@@ -112,8 +113,19 @@ const ChatContainer = ({ onOpenSidebar }) => {
   }, [selectedUser?._id, markMessagesAsRead]);
 
   useEffect(() => {
+    isInitialLoad.current = true;
+  }, [selectedUser?._id, selectedGroup?._id]);
+
+  useEffect(() => {
     if (messages.length > 0) {
-      scrollToBottom();
+      if (isInitialLoad.current) {
+        scrollToBottom("auto");
+        // We set isInitialLoad to false after a short delay or after the scroll has happened
+        // to ensure that subsequent messages (like those received via socket) use "smooth"
+        isInitialLoad.current = false;
+      } else {
+        scrollToBottom("smooth");
+      }
     }
   }, [messages, scrollToBottom]);
 
@@ -253,10 +265,9 @@ const ChatContainer = ({ onOpenSidebar }) => {
         <ChatHeader onSearchMessages={handleOpenMessageSearch} />
       </div>
 
-      {/* Messages Container */}
       <div
         ref={containerRef}
-        className="flex-1 overflow-y-auto px-4 py-6 md:px-6 scroll-smooth relative z-10"
+        className="flex-1 overflow-y-auto px-4 py-6 md:px-6 relative z-10"
       >
         {/* Messages */}
         <div className="space-y-1">

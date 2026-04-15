@@ -3,6 +3,7 @@ import { createPeer, getPeer } from "../lib/webrtc";
 import { getSocket } from "../lib/socket";
 import { useAuthStore } from "./useAuthStore";
 import { useChatStore } from "./useChatStore.jsx";
+import { startRingtone, startRingback, stopAllSounds } from "../lib/soundUtils";
 import toast from "react-hot-toast";
 
 const useCallStore = create((set, get) => ({
@@ -46,6 +47,11 @@ const useCallStore = create((set, get) => ({
     setCaller: (caller) => set({ caller }),
     setReceiver: (receiver) => set({ receiver }),
     setPeer: (peer) => set({ peer }),
+    
+    // Helper to clear any active sound loops
+    _stopSounds: () => {
+      stopAllSounds();
+    },
     addMissedCall: (caller) => set((state) => ({ 
       missedCalls: [{ id: Date.now(), caller, time: new Date() }, ...state.missedCalls] 
     })),
@@ -188,6 +194,9 @@ const useCallStore = create((set, get) => ({
           callTimeoutRef: timeoutId,
         });
 
+        // Start playing the outgoing "tuu-tuu" sound
+        startRingback();
+
         peer.on("signal", (data) => {
           const socket = getSocket();
           socket.emit("call-user", {
@@ -250,6 +259,7 @@ const useCallStore = create((set, get) => ({
           });
 
           if (offer) peer.signal(offer);
+          stopAllSounds(); // Stop ringtone when answering
           set({ peer, localStream: stream, callState: "in-call", callTimeoutRef: null, callStartTime: Date.now() });
         })
         .catch((err) => {
@@ -319,6 +329,7 @@ const useCallStore = create((set, get) => ({
         isReconnecting: false,
         networkQuality: 3,
       });
+      stopAllSounds();
     },
 
     initializeSocketListeners: () => {
@@ -358,6 +369,9 @@ const useCallStore = create((set, get) => ({
           offer: data.offer, // Capture offer
           callTimeoutRef: timeoutId,
         });
+
+        // Start playing the incoming ringtone
+        startRingtone("marimba");
       });
 
       socket.on("call-received", () => {

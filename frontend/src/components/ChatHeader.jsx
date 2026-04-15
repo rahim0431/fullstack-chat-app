@@ -232,20 +232,18 @@ const ChatHeader = ({ onSearchMessages }) => {
             {createPortal(
               <AnimatePresence>
                 {menuOpen && (
-                  <div
+                  <motion.div
+                    key="dropdown-menu"
                     ref={menuRef}
                     style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
-                    className="z-[9999]"
+                    className="z-[9999] w-56 rounded-2xl border border-base-300 bg-base-100 shadow-2xl overflow-hidden"
+                    initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    data-theme={theme}
+                    role="menu"
                   >
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
-                      data-theme={theme}
-                      className="w-56 rounded-2xl border border-base-300 bg-base-100 shadow-2xl overflow-hidden"
-                      role="menu"
-                    >
                     {confirm === "" && (
                       <ul className="py-2">
                         {/* ── Private Chat Actions ── */}
@@ -417,7 +415,6 @@ const ChatHeader = ({ onSearchMessages }) => {
                       )}
                     </div>
                   </motion.div>
-                </div>
               )}
             </AnimatePresence>,
             document.body

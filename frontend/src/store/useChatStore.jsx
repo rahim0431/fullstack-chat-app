@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 import { axiosInstance } from "../lib/axios";
 import { useAuthStore } from "./useAuthStore";
 import { showCustomToast } from "../components/NotificationToast";
+import { playNotificationSound } from "../lib/soundUtils";
 
 const createId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 const getNextVoiceGender = (current) => (current === "male" ? "female" : "male");
@@ -26,119 +27,8 @@ const getContent = (message, type) => {
   return message.content ?? message.text ?? "";
 };
 
-let audioContext = null;
+// Notification tracking
 const processedToastIds = new Set();
-
-// One-time listener to unlock audio on first interaction
-if (typeof window !== "undefined") {
-  const unlockAudio = () => {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!audioContext && AudioCtx) {
-      audioContext = new AudioCtx();
-    }
-    
-    if (audioContext) {
-      if (audioContext.state === "suspended") {
-        audioContext.resume().then(() => {
-          if (audioContext.state === "running") {
-            window.removeEventListener("click", unlockAudio);
-            window.removeEventListener("touchstart", unlockAudio);
-            window.removeEventListener("keydown", unlockAudio);
-          }
-        }).catch(() => {});
-      } else if (audioContext.state === "running") {
-        window.removeEventListener("click", unlockAudio);
-        window.removeEventListener("touchstart", unlockAudio);
-        window.removeEventListener("keydown", unlockAudio);
-      }
-    }
-  };
-  window.addEventListener("click", unlockAudio);
-  window.addEventListener("touchstart", unlockAudio);
-  window.addEventListener("keydown", unlockAudio);
-}
-
-const playNotificationSound = (soundName = "Default Chime") => {
-  if (typeof window === "undefined") return;
-  if (!soundName || soundName === "Silent") return;
-
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return;
-
-  if (!audioContext) {
-    audioContext = new AudioCtx();
-  }
-
-  // Use an async-safe way to resume the context
-  const startPlaying = () => {
-    const ctx = audioContext;
-    const now = ctx.currentTime;
-
-    const tone = (freq, start, duration, type = "sine", volume = 0.12) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = type;
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.linearRampToValueAtTime(volume, start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(start);
-      osc.stop(start + duration + 0.02);
-    };
-
-    let total = 0.3;
-    switch (soundName) {
-      case "Soft Bell":
-        tone(440, now, 0.22);
-        tone(660, now + 0.16, 0.22);
-        total = 0.5;
-        break;
-      case "Pop Tone":
-        tone(880, now, 0.12, "square", 0.08);
-        total = 0.2;
-        break;
-      case "Crystal Ping":
-        tone(1046, now, 0.18, "triangle", 0.1);
-        tone(1318, now + 0.14, 0.18, "triangle", 0.1);
-        total = 0.4;
-        break;
-      case "Warm Pulse":
-        tone(330, now, 0.2, "sine", 0.12);
-        tone(330, now + 0.24, 0.2, "sine", 0.12);
-        total = 0.6;
-        break;
-      case "Gentle Drop":
-        tone(740, now, 0.18, "sine", 0.1);
-        tone(520, now + 0.16, 0.2, "sine", 0.1);
-        total = 0.5;
-        break;
-      case "Echo Spark":
-        tone(784, now, 0.12, "triangle", 0.1);
-        tone(988, now + 0.12, 0.12, "triangle", 0.1);
-        tone(1175, now + 0.24, 0.12, "triangle", 0.1);
-        total = 0.5;
-        break;
-      default:
-        tone(523, now, 0.18);
-        tone(659, now + 0.14, 0.18);
-        tone(784, now + 0.28, 0.18);
-        total = 0.6;
-        break;
-    }
-  };
-
-  if (audioContext && audioContext.state === "running") {
-    startPlaying();
-  } else if (audioContext && audioContext.state === "suspended") {
-    audioContext.resume().then(() => {
-      if (audioContext.state === "running") startPlaying();
-    }).catch(() => {
-      /* Silently fail if still blocked by browser policy */
-    });
-  }
-};
 
 const normalizeMessage = (rawMessage, authUserId) => {
   const type = detectType(rawMessage);
@@ -522,6 +412,20 @@ export const useChatStore = create((set, get) => ({
       toast.success("Member removed");
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to remove member");
+    }
+  },
+
+  addGroupMembers: async (groupId, userIds) => {
+    try {
+      const res = await axiosInstance.put(`/groups/add/${groupId}`, { userIds });
+      set((state) => ({
+        groups: state.groups.map((g) => (g._id === groupId ? res.data : g)),
+        selectedGroup: state.selectedGroup?._id === groupId ? res.data : state.selectedGroup,
+      }));
+      toast.success("Participants added successfully");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to add participants");
+      throw error;
     }
   },
 

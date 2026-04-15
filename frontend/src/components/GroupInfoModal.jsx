@@ -1,4 +1,4 @@
-import { X, User, Settings, Users, LogOut, Shield, ShieldCheck, Trash2, Camera, Edit2 } from "lucide-react";
+import { X, User, Settings, Users, LogOut, Shield, ShieldCheck, Trash2, Camera, Edit2, Search, Check } from "lucide-react";
 import { useChatStore } from "../store/useChatStore";
 import { useAuthStore } from "../store/useAuthStore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import ImageCropper from "./ImageCropper";
 
 const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
-  const { selectedGroup, updateGroup, updateGroupSettings, leaveGroup, removeGroupMember, makeGroupAdmin } = useChatStore();
+  const { selectedGroup, updateGroup, updateGroupSettings, leaveGroup, removeGroupMember, makeGroupAdmin, users, addGroupMembers } = useChatStore();
   const { authUser, onlineUsers } = useAuthStore();
   
   const [activeTab, setActiveTab] = useState(initialTab); // "info" | "members" | "settings"
@@ -15,6 +15,8 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
   const [editedName, setEditedName] = useState(selectedGroup?.name || "");
   const [editedDesc, setEditedDesc] = useState(selectedGroup?.description || "");
   const [selectedImage, setSelectedImage] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedNewMembers, setSelectedNewMembers] = useState([]);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -65,14 +67,15 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
   ) || [];
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 mt-14">
-          {/* Overlay */}
-          <motion.div 
-            initial={{ opacity: 0 }} 
-            animate={{ opacity: 1 }} 
-            exit={{ opacity: 0 }}
+    <>
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div key="group-modal-wrapper" className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-6 mt-14">
+            {/* Overlay */}
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }}
             onClick={onClose}
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
           />
@@ -82,10 +85,10 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            className="relative w-full max-w-lg bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300"
+            className="relative w-full max-w-lg bg-base-100 rounded-3xl shadow-2xl overflow-hidden border border-base-300 flex flex-col max-h-[85vh]"
           >
             {/* Header Area (Banner-like) */}
-            <div className="relative h-52 bg-primary/10 flex items-center justify-center overflow-hidden">
+            <div className="relative shrink-0 h-52 bg-primary/10 flex items-center justify-center overflow-hidden">
               <img 
                 src={selectedGroup.profilePic || "/avatar.png"} 
                 alt={selectedGroup.name}
@@ -118,7 +121,7 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
             </div>
 
             {/* Content Tabs */}
-            <div className="flex border-b border-base-300 bg-base-200/50 px-4">
+            <div className="flex shrink-0 border-b border-base-300 bg-base-200/50 px-4">
               <button 
                 onClick={() => setActiveTab("info")}
                 className={`py-3 px-4 text-sm font-semibold flex items-center gap-2 border-b-2 transition-all ${activeTab === "info" ? "border-primary text-primary" : "border-transparent text-base-content/60 hover:text-base-content"}`}
@@ -142,7 +145,7 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
             </div>
 
             {/* Tab Content Body */}
-            <div className="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+            <div className="p-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
               
               {/* Tab: Info */}
               {activeTab === "info" && (
@@ -212,7 +215,74 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
               {/* Tab: Members */}
               {activeTab === "members" && (
                 <div className="space-y-4">
-                  {uniqueMembers.map((member, index) => {
+                  {isAdmin && (
+                    <div className="mb-6 space-y-3 bg-base-200/50 p-3 rounded-2xl border border-base-300">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-base-content/60 flex items-center gap-2">
+                          <Users className="w-3.5 h-3.5" /> Add New Participants
+                        </label>
+                        {selectedNewMembers.length > 0 && (
+                          <button 
+                            onClick={async () => {
+                              await addGroupMembers(selectedGroup._id, selectedNewMembers);
+                              setSelectedNewMembers([]);
+                              setSearchTerm("");
+                            }}
+                            className="btn btn-primary btn-xs rounded-lg shadow-md"
+                          >
+                            Add ({selectedNewMembers.length})
+                          </button>
+                        )}
+                      </div>
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-base-content/30" />
+                        <input
+                          type="text"
+                          placeholder="Search your contacts to add..."
+                          className="input input-sm input-bordered w-full pl-9 rounded-xl text-xs bg-base-100"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                      </div>
+                      {searchTerm.trim() !== "" && (
+                        <div className="max-h-40 overflow-y-auto space-y-1 p-2 bg-base-100 rounded-xl border border-base-300 custom-scrollbar">
+                          {users
+                            .filter(u => 
+                              u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) && 
+                              !uniqueMembers.some(m => m._id === u._id)
+                            )
+                            .map((user) => (
+                              <div
+                                key={user._id}
+                                onClick={() => {
+                                  setSelectedNewMembers(prev => 
+                                    prev.includes(user._id) ? prev.filter(id => id !== user._id) : [...prev, user._id]
+                                  )
+                                }}
+                                className={`flex items-center justify-between p-2 rounded-xl cursor-pointer transition-colors ${
+                                  selectedNewMembers.includes(user._id) ? "bg-primary/10 ring-1 ring-primary/30" : "hover:bg-base-200"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <img src={user.profilePic || "/avatar.png"} alt={user.fullName} className="w-8 h-8 rounded-lg object-cover" />
+                                  <span className="text-xs font-semibold">{user.fullName}</span>
+                                </div>
+                                <div className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${selectedNewMembers.includes(user._id) ? "bg-primary border-primary" : "border-base-300 bg-base-100"}`}>
+                                  {selectedNewMembers.includes(user._id) && <Check className="w-3 h-3 text-white" />}
+                                </div>
+                              </div>
+                            ))
+                          }
+                          {users.filter(u => u.fullName.toLowerCase().includes(searchTerm.toLowerCase()) && !uniqueMembers.some(m => m._id === u._id)).length === 0 && (
+                            <p className="text-center text-xs text-base-content/40 py-3">No contacts available to add</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="space-y-4">
+                    {uniqueMembers.map((member, index) => {
                     const isMemberAdmin = selectedGroup.admin?._id === member._id || selectedGroup.admin === member._id;
                     const isOnline = onlineUsers.includes(member._id);
                     
@@ -268,7 +338,8 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
                         </div>
                       </div>
                     );
-                  })}
+                    })}
+                  </div>
                 </div>
               )}
 
@@ -334,23 +405,26 @@ const GroupInfoModal = ({ isOpen, onClose, initialTab = "info" }) => {
 
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Image Cropper Modal */}
       <AnimatePresence>
         {selectedImage && (
-          <ImageCropper 
-            image={selectedImage}
-            onCrop={handleCropComplete}
-            onCancel={() => {
-              setSelectedImage(null);
-              if (fileInputRef.current) fileInputRef.current.value = "";
-            }}
-          />
+          <motion.div key="image-cropper-wrapper" className="fixed inset-0 z-[200]">
+            <ImageCropper 
+              image={selectedImage}
+              onCrop={handleCropComplete}
+              onCancel={() => {
+                setSelectedImage(null);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+              }}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
-    </AnimatePresence>
+    </>
   );
 };
 

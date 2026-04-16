@@ -118,20 +118,7 @@ export const useChatStore = create((set, get) => ({
 
   setIsAITyping: (val) => set({ isAITyping: val }),
 
-  setReplyMessage: (message) => set({ replyMessage: message }),
   setForwardMessage: (message) => set({ forwardMessage: message }),
-
-  deleteMessage: async (messageId, scope = "all") => {
-    try {
-      await axiosInstance.delete(`/messages/${messageId}?scope=${encodeURIComponent(scope)}`);
-      set((state) => ({
-        messages: state.messages.filter((msg) => msg._id !== messageId && msg.id !== messageId),
-      }));
-    } catch (error) {
-      console.error("Error deleting message:", error);
-      throw error;
-    }
-  },
 
   getUnreadCount: (userId) => get().unreadCounts[userId] || 0,
 

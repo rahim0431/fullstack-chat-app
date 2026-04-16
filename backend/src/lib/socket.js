@@ -11,7 +11,11 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: [
+      "http://localhost:5173",
+      "https://fullstack-chat-app-bice.vercel.app",
+      process.env.CLIENT_URL
+    ].filter(Boolean),
   },
 });
 
